@@ -80,7 +80,7 @@ function LMO(objective::Symbol, given::NamedTuple, silent::Bool)
     vₒ = 55                                                                             # Vehicle free-flow speed outside the service region (mph)
     VC = 360                                                                            # Vehicle capacity (number of customers)
     PC = 80000                                                                          # Vehicle purchase cost
-    τᶜ = 1.0/60                                                                         # Service time at customer (hours)
+    τᶜ = 1.836/60                                                                       # Service time at customer (hours)
     τᶠ = 0.3/60                                                                         # Service time at facility (hours)
     rᶠ = 0.1                                                                            # Rate of fuel consumption (gallon/mile)
     rᵉ = 1                                                                              # Rate of emission (grams/mile)

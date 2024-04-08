@@ -36,11 +36,12 @@ function batch_analyze(dir)
     df = DataFrame(file = String[], start = Int64[], recovery = Int64[], 
                    rob = Float64[], red = Float64[], res = Float64[], rap = Float64[],
                    TD = Float64[], APD₁ = Float64[], APD₂ = Float64[], APD₃ = Float64[],
-                   DL = Float64[], IL = Float64[], TL = Float64[])
+                   DL = Float64[], IL = Float64[], TL = Float64[],
+                   DLp = Float64[], ILp = Float64[], TLp = Float64[])
     for jld in readdir(dir)
         println("# ─── $jld ────────────────────────────────────────────────────────────────────────")
         sim = joinpath(dir, jld)
-        tˢ, tʳ, rob, red, res, rap, TD, APD₁, APD₂, APD₃, DL, IL, TL = analyze(sim, false)
+        tˢ, tʳ, rob, red, res, rap, TD, APD₁, APD₂, APD₃, DL, IL, TL, DLp, ILp, TLp = analyze(sim, false)
         push!(df[!, :file], jld)
         push!(df[!, :start], tˢ)
         push!(df[!, :recovery], tʳ)
@@ -55,8 +56,11 @@ function batch_analyze(dir)
         push!(df[!, :DL], DL)
         push!(df[!, :IL], IL)
         push!(df[!, :TL], TL)
+        push!(df[!, :DLp], DLp)
+        push!(df[!, :ILp], ILp)
+        push!(df[!, :TLp], TLp)
     end
-    CSV.write("df - mh.csv", df)
+    CSV.write("df - sensitivity analysis - θ₂.csv", df)
 end
 
 
@@ -110,12 +114,13 @@ end
 
 #experiment()
 
-directory = joinpath(@__DIR__, "Results/#2. Outsourcing Share/#4. Micro-hubs/")
+directory = joinpath(@__DIR__, "Results/#3. Sensitivity Analysis/#6. θ₂/")
 batch_analyze(directory)
 
 #figures()
 
-#LMO(:minTC, (N=Nₜ(-Inf), φ=φₜ(-Inf)), false)
+LMO(:minTC, (N=Nₜ(-Inf), φ=φₜ(-Inf)), false)
+LMO(:maxN, (ρₓ=5.44, φ=φₜ(d), f̅=152, Ψᵐʰ=1, Nᵐʰ=10, f̅′=220, pᵤ = 1.0), false)
 
 #LMO(:minTC, (N=Nₜ(d), φ=φₜ(d), ρₓ=6.447, f̅=98, Ψᶜˢ=1, f̅′=565, pᵤ=1.0), false)
 #LMO(:minTC, (N=Nₜ(d), φ=φₜ(d), ρₓ=6.447, f̅=98, Ψᶜᵖ=1, Nᶜᵖ=200, f̅′=v, pᵤ=0.85), false)

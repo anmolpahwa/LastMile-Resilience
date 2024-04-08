@@ -46,10 +46,7 @@ function analyze(sim, showplots=true)
     data = load(sim)
     N̄, Ñ, N, TC⃰, re_optimize = data["N̄"], data["Ñ"], data["N"], data["TC⃰"], data["re_optimize"]
     Label = abbreviate(String(re_optimize))
-    T = length(Ñ)
-
-    N = zeros(T)
-    for t ∈ 1:T N[t] = (t ≤ tˢ ? Nₜ(-Inf) : (Ñ[t] == 0 ? Nₜ(t) + Ñ[t-1] : N̄[t])) end
+    T = length(N)
 
     # ─── LEVEL OF SERVICE ───────────────────────────────────────────────────────────
     Z = zeros(T)
@@ -59,14 +56,14 @@ function analyze(sim, showplots=true)
     Y  = copy(Z)
     tᵖ = argmin(Y[(tˢ-1):end]) + (tˢ - 2)                                                                       # Peak peri-disruption day
     tʳ = findfirst(x -> (Y[end] - ε <= x <= Y[end] + ε), Y[tᵖ:end]) + (tᵖ - 1)                                  # Recovery day
-    rob = converged ? round(Y[tᵖ], digits=3) : 0.0                                                              # Robustness
-    red = converged ? round(atan(((tᵖ - (tˢ - 1))/(tᵉ - tˢ + 1))/(Y[tˢ-1] - Y[tᵖ]))/(π/2), digits=3) : NaN      # Redundancy
-    res = converged ? round((Y[tʳ] - Y[tᵖ])/(1 - Y[tᵖ]), digits=3) : 0.0                                        # Resourcefulness
-    rap = converged ? round(atan((Y[tʳ] - Y[tᵖ])/((tʳ - tᵖ)/(tᵉ - tˢ + 1)))/(π/2), digits=3) : NaN              # Rapidity
+    rob = converged ? Y[tᵖ] : 0.0                                                                               # Robustness
+    red = converged ? atan(((tᵖ - (tˢ - 1))/(tᵉ - tˢ + 1))/(Y[tˢ-1] - Y[tᵖ]))/(π/2) : NaN                       # Redundancy
+    res = converged ? (Y[tʳ] - Y[tᵖ])/(1 - Y[tᵖ]) : 0.0                                                         # Resourcefulness
+    rap = converged ? atan((Y[tʳ] - Y[tᵖ])/((tʳ - tᵖ)/(tᵉ - tˢ + 1)))/(π/2) : NaN                               # Rapidity
     TD   = sum(Ñ[tˢ:tʳ])
-    APD₁ = sum(Ñ[tˢ:tʳ])/(tʳ - tˢ)
-    APD₂ = sum(Ñ[tˢ:tʳ])/(sum(Nₜ.(tˢ:tʳ)))
-    APD₃ = tʳ > tˢ ? sum([Nₜ(t) - N[t] ≥ 0.0 ? Nₜ(t) - N[t] : 0.0 for t ∈ tˢ:tʳ])/(tʳ - tˢ) : NaN
+    APD₁ = sum(Ñ[tˢ:tʳ])/(tʳ - tˢ + 1)
+    APD₂ = maximum(Ñ)/(tᵖ - tˢ + 1)
+    APD₃ = sum(Ñ[tˢ:tʳ])/(sum(N[tˢ:tʳ]))
     println("Level of Service - $Label")
     println("   Disruption start day   : $tˢ")
     println("   Peak day               : $tᵖ")
@@ -79,9 +76,9 @@ function analyze(sim, showplots=true)
     println("   Rapidity               = $rap")
     println()
     println("   Total delay (pkg-days) = $TD")
-    println("   Avg. pkg delay (pkg)   = $APD₁")
-    println("   Avg. pkg delay (days)  = $APD₂")
-    println("   Avg. pkgs delayed      = $APD₃")
+    println("   Avg. pkg delay (pkg)   = $APD₁")                                     
+    println("   Avg. pkgs delayed (pkg)= $APD₂")
+    println("   Avg. pkg delay (days)  = $APD₃")    
 
     # ─── LOSS ───────────────────────────────────────────────────────────────────────
     Z = zeros(T)
@@ -90,18 +87,24 @@ function analyze(sim, showplots=true)
     Y = copy(Z) .- TC⃰[1] * Nₜ(-Inf)
     tᵖ = argmax(Y[(tˢ-1):end]) + (tˢ - 2)
     tʳ = findfirst(x -> (Y[end] - ε <= x <= Y[end] + ε), Y[tᵖ:end]) + (tᵖ - 1)   
-    DL = round(sum(Y[1:tʳ]), digits=1)                                                                          # Direct loss
-    IL = round(5 * sum(Ñ[1:tʳ]), digits=3)                                                                      # Indirect loss
-    TL = round((sum(Y[1:tʳ]) + 5 * sum(Ñ[1:tʳ])), digits=3)                                                     # Total loss    
+    DL = sum(Y[tˢ:tʳ])                                                                                          # Direct loss
+    IL = 5 * sum(Ñ[tˢ:tʳ])                                                                                      # Indirect loss
+    TL = (sum(Y[tˢ:tʳ]) + 5 * sum(Ñ[tˢ:tʳ]))                                                                    # Total loss    
+    DLp= DL/sum(N[tˢ:tʳ])  
+    ILp= IL/sum(N[tˢ:tʳ])  
+    TLp= TL/sum(N[tˢ:tʳ])
     println("\n\nNet Loss")
-    println("   Disruption start day   : $tˢ")
-    println("   Peak day               : $tᵖ")
-    println("   Recovery day           : $tʳ")
-    println("   Time to recovery       : $(tʳ - tˢ)")
+    println("   Disruption start day            : $tˢ")
+    println("   Peak day                        : $tᵖ")
+    println("   Recovery day                    : $tʳ")
+    println("   Time to recovery                : $(tʳ - tˢ)")
     println()
-    println("   Direct Loss (\$)      = $DL")
-    println("   Indirect Loss (\$)    = $IL")
-    println("   Total Loss (\$)       = $TL")
+    println("   Direct Loss (\$)                = $DL")
+    println("   Indirect Loss (\$)              = $IL")
+    println("   Total Loss (\$)                 = $TL")
+    println("   Direct Loss per package (\$)    = $DLp")
+    println("   Indirect Loss per package (\$)  = $ILp")
+    println("   Total Loss per package (\$)     = $TLp")
     println("\n\n")
 
     if showplots
@@ -147,5 +150,5 @@ function analyze(sim, showplots=true)
         display(fig)
     end
 
-    return tˢ, tʳ, rob, red, res, rap, TD, APD₁, APD₂, APD₃, DL, IL, TL
+    return tˢ, tʳ, rob, red, res, rap, TD, APD₁, APD₂, APD₃, DL, IL, TL, DLp, ILp, TLp
 end
